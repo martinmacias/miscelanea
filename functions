@@ -1,3 +1,4 @@
+## Name Matching ##
 # These functions help to identify how dissimilar is a column of names in a dataframe compared to a column of "official" names in another dataframe
 # It relies in the stringdist package in R
 
@@ -119,6 +120,10 @@ parseTablesFun<-function(unofficialData, unofficialCol, officialData, officialNa
 }
 
 
+
+
+
+## st functions ##
 nSmallest<- function(dataframe, n) {
   # Apply the sorting and head functions to each row
   resultMatrix <- apply(dataframe, 1, function(row){
@@ -161,4 +166,102 @@ st_nearest_neighbors<-function(x,y,idColx,idColy,n){
   
   # Return matrix
   return(d)
+}
+
+# st_intersects_fast<-function(index,intersection,x,y,columnsx){
+#   # Input: index, intersection list, data x, data y, columns to keep from x
+#   # Output: a list with all the polygons from y intersected with the unique polygons from x
+#   
+#   require(sf)
+#   
+#   filter<-intersection[[index]]
+#   
+#   # take the information from favelas
+#   subsetx<-as.data.frame(x)[index,c("cd_fvl_", "NM_AGSN")]
+#   
+#   # create a dataset of the info from favelas length of filter
+#   subsetx<-as.data.frame(x = lapply(subsetx, rep, length(filter)))
+#   
+#   # subset of the information from the setores data with the filter
+#   subsety<-setoresDataShape[filter,]
+#   
+#   # cbind subset of setores with dataset with info from favelas
+#   output<-cbind(subsetx, subsety)
+#   
+#   # return the dataset 
+#   return(output)
+#   
+# }
+
+st_intersection_fast<-function(x,y, own_intersection=F, workers=NULL){
+  
+  # Inputs: two dataframes of the sf class
+  # Output: a single dataframe with each polygon from x that instersects with the polygons from y and all their variables
+  
+  # Packages
+  # require(sf)
+  # require(doParallel)
+  # require(foreach)
+  
+  
+  if (st_crs(x)!=st_crs(y)) {
+    stop("x and y have different projections")
+  }
+  
+  ## dataset with only the 
+  
+  ## 1. intersects list
+  d<-st_intersects(x = x, y = y)
+  
+  if (own_intersection==T) {
+    ## 2. Remove own intersection
+    d<-lapply(seq_along(d),function(x){d[[x]][d[[x]]!=x]})
+  }
+  
+  # Loop
+  print("loop")
+  result<-lapply(seq_along(d), function(m){
+    # Set index
+    index<-d[[m]]
+    
+    # Subset data
+    subx<-x[m,]
+    suby<-y[index,]
+    
+    # Intersection
+    int<-st_intersection(x = subx, y = suby)
+    
+    # Yield result
+    return(int)
+  })
+  
+  # docall
+  print("docall")
+  result<-do.call(what = "rbind", args = result)
+  
+  return(result)
+  # cl<-parallel::makeCluster(spec = workers, type = "PSOCK")
+  # registerDoParallel(cl = cl)
+  # print(foreach::getDoParRegistered())
+  # result<-
+  #   ## 2. from each element of the list, filter dataset x, filter dataset y
+  #   foreach(m=1:length(d), .combine = "rbind") %dopar% {
+  #     
+  #     # packages
+  #     library(sf)
+  #     
+  #     # Set index 
+  #     index<-d[[m]]
+  #     subx<-x[m,]
+  #     suby<-y[index,]
+  #     
+  #     # Intersection
+  #     int<-st_intersection(x = subx, y = suby)
+  #     
+  #     # Yield result
+  #     int
+  #   }
+  # stopCluster(cl = cl)
+  
+  
 }
