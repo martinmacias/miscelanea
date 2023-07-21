@@ -1,0 +1,164 @@
+# These functions help to identify how dissimilar is a column of names in a dataframe compared to a column of "official" names in another dataframe
+# It relies in the stringdist package in R
+
+similarityFun<-function(unofficialName, officialData, officialNameCol, officialIDcol, method, p=0){
+  
+  # Set up vector of official names
+  official<-officialData[,officialNameCol]
+  
+  # Set up vector of official ID
+  officialID<-officialData[,officialIDcol]
+  
+  # Build similarity vector
+  simVector<-stringdist(a = unofficialName, b = official, method = method, p=p)
+  
+  # get: median, and two smallest values
+  m<-median(simVector, na.rm = T)
+  
+  # Order the similarity vector and get the first value
+  firstValue<-simVector[order(simVector)][1]
+  
+  # Get an index of in which position of the similarity vector 
+  # is the smallest value
+  indexFirst<-which(simVector==firstValue)
+  
+  
+  # Solve ties #
+  
+  
+  # If the index yields more than one value, means there are two values
+  # with the smalles jw value
+  if (length(indexFirst)>1) {
+    
+    # Therefore, make the first official name with the smallest value
+    # the first name to be assigned as well as ID
+    firstName<-official[indexFirst[1]]
+    firstID<-officialID[indexFirst[1]]
+    
+    # Given is a tie, assign the smallest jw value to the second name
+    secondValue<-firstValue
+    
+    # The index has more than one value
+    # Thus, get the second element of the index 
+    # to get the second assigned name
+    secondName<-official[indexFirst[2]]
+    secondID<-officialID[indexFirst[2]]
+    #print(c(first, secondValue, second))
+    
+  } else {
+    
+    firstName<-official[indexFirst]
+    firstID<-officialID[indexFirst]
+    
+    # Set up second largest value and index of second largest value
+    secondValue<-simVector[order(simVector)][2]
+    indexSecond<-which(simVector==secondValue)
+    
+    # If the index of the second value is larger than one,
+    # then, there are two values with the second smallest value
+    if (length(indexSecond)>1) {
+      
+      # Therefore, make the second official name with the first second smallest value
+      # the second name to be assigned as well as ID
+      secondName<-official[indexSecond[1]]
+      secondID<-officialID[indexSecond[1]]
+      
+    } else{
+      
+      # Else, just make the second official name the 
+      # single index that was selected 
+      secondName<-official[indexSecond]
+      secondID<-officialID[indexSecond]
+    }}
+  
+  firstValue<-round(firstValue,3)
+  secondValue<-round(secondValue,3)
+  m<-round(m,3)
+  
+  # Yield result as a dataframe with the names and values
+  result<-as.data.frame(cbind(firstID,
+                              firstName,
+                              firstValue,
+                              secondID,
+                              secondName,
+                              secondValue,
+                              m))
+  #if (ncol(result)!=7) {
+   # print(m)
+  #}
+  return(result)
+}
+
+
+parseTablesFun<-function(unofficialData, unofficialCol, officialData, officialNameCol, officialIDcol, municipio=FALSE, method, p=0){
+  
+  print(unofficialData[1,1])
+  # Assign vector of unofficial and official names
+  unofficialName<-unofficialData[,unofficialCol]
+  
+  # Get similarity table
+  similarityList<-lapply(unofficialName, 
+                         similarityFun, 
+                         officialData=officialData, 
+                         officialNameCol=officialNameCol,
+                         officialIDcol=officialIDcol,
+                         method=method, 
+                         p=p)
+  
+  similarityTable<-do.call(what = "rbind", args = similarityList)
+  
+  print(ncol(similarityTable))
+  
+  if (municipio) {
+    names(similarityTable)<-paste0(names(similarityTable),"Mun")
+  }
+  
+  result<-cbind(unofficialData, similarityTable)
+  
+  return(result)
+}
+
+
+nSmallest<- function(dataframe, n) {
+  # Apply the sorting and head functions to each row
+  resultMatrix <- apply(dataframe, 1, function(row){
+    result<-order(row)[2:(n+1)]
+    return(result)
+  })
+  return(resultMatrix)
+}
+
+st_nearest_neighbors<-function(x,y,idColx,idColy,n){
+  # Inputs: two shapefiles, the id column of x, the id column of y to identify neighbors in y, n neighbors
+  # Output: a data frame with a column of n ids for each element of x and a column of the n nearest neighbhors from y
+  # Get ids from x
+  ids<-unique(as.data.frame(x)[,idColx])
+  print(length(ids))
+  
+  # Repeat ids as many neighbors as needed
+  ids<-matrix(rep(ids, each=n),ncol=1)
+  
+  # Warnings
+  if (st_crs(x)!=st_crs(y)) {
+    stop("x and y projections differ")
+  }
+  
+  # Calcualte distance matrix
+  d<-st_distance(x = x,
+                 y = y)
+  
+  # Convert distances to numeric
+  d<-apply(X = as.data.frame(d), MARGIN = 2, FUN = as.numeric) 
+  
+  # Get indices of n nearest neighbors
+  d<-nSmallest(dataframe = d, n = n)
+  d<-matrix(d, ncol=1)
+  
+  # Create a matrix of the ids from x and the indices of the nearest elements of y
+  d<-as.data.frame(cbind(ids,d))
+  d[,2]<-as.data.frame(y)[,idColy][as.numeric(d[,2])]
+  names(d)<-c("idsx","idsy")
+  
+  # Return matrix
+  return(d)
+}
