@@ -193,22 +193,21 @@ st_nearest_neighbors<-function(x,y,idColx,idColy,n){
 #   
 # }
 
-st_intersection_fast<-function(x,y, own_intersection=F, workers=NULL){
+## Intersection 3 times faster than st_intersection
+st_intersection_fast<-function(x,y, own_intersection=F, workers){
   
   # Inputs: two dataframes of the sf class
-  # Output: a single dataframe with each polygon from x that instersects with the polygons from y and all their variables
+  # Output: a single dataframe with each sf feature from x that instersects with the sf features from y and all their variables
   
   # Packages
-  # require(sf)
-  # require(doParallel)
-  # require(foreach)
+  require(sf)
+  #require(doParallel)
   
-  
+  # Harmonize crs
   if (st_crs(x)!=st_crs(y)) {
-    stop("x and y have different projections")
+    warning("x and y have different projections. Assigned projection of x to y")
+    y<-st_transform(x = y, crs = st_crs(x))
   }
-  
-  ## dataset with only the 
   
   ## 1. intersects list
   d<-st_intersects(x = x, y = y)
@@ -218,50 +217,101 @@ st_intersection_fast<-function(x,y, own_intersection=F, workers=NULL){
     d<-lapply(seq_along(d),function(x){d[[x]][d[[x]]!=x]})
   }
   
-  # Loop
+  # 3. Parallel loop to intersect each subset of intersected features
   print("loop")
-  result<-lapply(seq_along(d), function(m){
-    # Set index
-    index<-d[[m]]
-    
-    # Subset data
-    subx<-x[m,]
-    suby<-y[index,]
-    
-    # Intersection
-    int<-st_intersection(x = subx, y = suby)
-    
-    # Yield result
-    return(int)
-  })
   
-  # docall
-  print("docall")
-  result<-do.call(what = "rbind", args = result)
+  ## Register workers
+  cl<-makeCluster(workers)
+  registerDoParallel(cl)
   
-  return(result)
-  # cl<-parallel::makeCluster(spec = workers, type = "PSOCK")
-  # registerDoParallel(cl = cl)
-  # print(foreach::getDoParRegistered())
-  # result<-
-  #   ## 2. from each element of the list, filter dataset x, filter dataset y
-  #   foreach(m=1:length(d), .combine = "rbind") %dopar% {
-  #     
-  #     # packages
-  #     library(sf)
-  #     
-  #     # Set index 
-  #     index<-d[[m]]
+  result<-
+    foreach(m=seq_along(d), .combine = rbind) %dopar% {
+      
+      # packages
+      library(sf)
+      
+      #  for each element of the index list,
+      #  extract index
+      index<-d[[m]]
+      
+      # do the instersection
+      #result<-st_intersection(x = favelas, y = fogoData[index,])
+      
+      # print result
+      #result
+      
+      
+      if (length(index)!=0) {
+        #     # Subset data
+        subx<-x[m,]
+        suby<-y[index,]
+        
+        # Intersection
+        int<-st_intersection(x = subx, y = suby)
+        
+        # Yield result
+        int
+      }
+      
+    }
+  
+  # Stop cluster
+  stopCluster(cl)
+  
+  # Non-parallel
+  # result<-lapply(seq_along(d), function(m){
+  #   # Set index
+  #   index<-d[[m]]
+  # 
+  #   if (length(index)!=0) {
+  #     # Subset data
   #     subx<-x[m,]
   #     suby<-y[index,]
-  #     
+  # 
   #     # Intersection
   #     int<-st_intersection(x = subx, y = suby)
-  #     
+  # 
   #     # Yield result
-  #     int
-  #   }
-  # stopCluster(cl = cl)
+  #     return(int)
+  #    }
+  # })
+
+  # docall
+  # print("docall")
+  # result<-do.call(what = "rbind", args = result)
   
+  return(result)
+}
+
+
+## Make columns with dummies out of columns with categorical variables ##
+dummiesFun<-function(name, column){
+  output<-ifelse(column==name,1,0)
   
+  return(output)
+}
+
+dataDummiesFun<-function(dataset, pat){
+  
+  ## Names of the dataset
+  datasetNames<-names(dataset)
+  
+  ## Subdataset to analyze
+  datasetSub<-as.data.frame(dataset)[,grepl(pattern = pat, x = datasetNames)]
+  
+  u<-unique(datasetSub)
+  
+  l<-lapply(u, dummiesFun, column=datasetSub)
+  
+  l<-as.data.frame(do.call(what = "cbind", args = l))
+  
+  names(l)<-paste0(u,"n")
+  
+  if (nrow(l)!=nrow(dataset)) {
+    stop("Number of rows between the original dataset and the created dummies differ")
+  }
+  
+  dataset<-cbind(dataset,l)
+  
+  return(dataset)
 }
