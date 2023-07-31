@@ -310,8 +310,45 @@ dataDummiesFun<-function(dataset, pat){
   if (nrow(l)!=nrow(dataset)) {
     stop("Number of rows between the original dataset and the created dummies differ")
   }
-  
-  dataset<-cbind(dataset,l)
+
+ dataset<-cbind(dataset,l)
   
   return(dataset)
+}
+
+
+## Regression Models ##
+multipleModelsFun<-function(outcome, data, id, time, covariate, controls=NULL, effect="twoways", controlsZero=NULL){
+  
+  # Filter data to only idtime, outcome, main covariates, controls
+  # d<-data[,c(id,outcome,covariate,controls,"admin3Name")]
+  
+  # Define names of outcome, covariate, and controls
+  y<-outcome
+  x<-covariate
+  
+  if (!is.null(controls)) {
+    controls<-paste0(controls, collapse = "+")
+    
+    # String of formula
+    f<-paste0(y, "~", x, "+", controls)
+    
+    
+    f<-as.formula(object = f)
+    print(f)
+  } else {
+    
+    # String of formula
+    f<-paste0(y, "~", x)
+    f<-as.formula(object = f)
+    print(f)
+  }
+  
+  
+  # Run models
+  m<-plm(formula = f, data = data, effect = effect, model = "within", index = c(id, time))
+  
+  # Return result
+  print(summary(m))
+  return(m)
 }
