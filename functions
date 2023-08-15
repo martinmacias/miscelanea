@@ -284,6 +284,45 @@ st_intersection_fast<-function(x,y, own_intersection=F, workers){
 }
 
 
+## functions to transform points to voronoi polygons
+pointsToVoronoi <- function(points, crs=NULL){
+  
+  # convert points data to selected crs, other than EPSG 4326
+  # because st_voronoi does not correctly triangulate lat lon data
+  if (!is.null(crs)) {
+    points<-st_transform(x = points, crs = crs)
+  }
+  
+  
+  ## points must be POINT geometry
+  # check for point geometry and execute if true
+  if(!all(st_geometry_type(points) == "POINT")){
+    stop("points should be POINT geometries")
+  }
+  
+  # make multipoint
+  print("multipoint")
+  g <- st_combine(st_geometry(points)) 
+  
+  
+  # create voronoi polygons
+  print("voronoi")
+  v <- st_voronoi(g)
+  
+  # extract voronoi polygons from list
+  print("extract")
+  v <- st_collection_extract(v)
+  
+  # create a dataframe of polygons and new id
+  print("df")
+  v <- st_sf(data.frame(vorid=1:length(v), 
+                        geometry=st_sfc(v)))
+  
+  return(v)
+}
+
+
+
 ## Make columns with dummies out of columns with categorical variables ##
 dummiesFun<-function(name, column){
   output<-ifelse(column==name,1,0)
@@ -315,6 +354,45 @@ dataDummiesFun<-function(dataset, pat){
   
   return(dataset)
 }
+
+
+
+st_intersection_points<-function(polygons, points){
+  
+  # intersect dataframe of voronoi polygons with data from points
+  print("intersection")
+  intList<-st_intersects(x = polygons, y = points)
+  
+  # coordinates
+  intCoords<-unlist(intList)
+  
+  if (length(intCoords)>nrow(polygons)) {
+    print("Some polygon intersect with more than one point")
+    stop()
+  }
+
+  # extract rows from points with coordinates
+  points<-points[intCoords,]
+  
+  # rename geometry of polygon
+  names(polygons)[names(polygons)=="geometry"]<-"geometrVoronoi"
+  
+  # cbind voronoiPolygons with points
+  result<-cbind(polygons, points)
+  
+  return(result)
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## Regression Models ##
