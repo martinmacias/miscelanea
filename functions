@@ -430,3 +430,24 @@ multipleModelsFun<-function(outcome, data, id, time, covariate, controls=NULL, e
   print(summary(m))
   return(m)
 }
+
+
+## Complex variables ##
+cumsumResetFun <- function(vector) {
+  cumulative_sum <- 0
+  result <- numeric(length(vector))
+  
+  for (i in seq_along(vector)) {
+    if (vector[i] == 0) {
+      cumulative_sum <- 0
+    } else {
+      cumulative_sum <- cumulative_sum + vector[i]
+    }
+    
+    result[i] <- cumulative_sum
+  }
+  
+  return(result)
+}
+
+
