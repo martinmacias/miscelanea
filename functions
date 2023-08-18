@@ -399,7 +399,7 @@ st_intersection_points<-function(polygons, points){
 multipleModelsFun<-function(outcome, data, id, time, covariate, controls=NULL, effect="twoways", controlsZero=NULL){
   
   # Filter data to only idtime, outcome, main covariates, controls
-  # d<-data[,c(id,outcome,covariate,controls,"admin3Name")]
+  # d<-data[,c(id,outcome,covariate,controls)]
   
   # Define names of outcome, covariate, and controls
   y<-outcome
@@ -431,6 +431,55 @@ multipleModelsFun<-function(outcome, data, id, time, covariate, controls=NULL, e
   return(m)
 }
 
+
+# For panel data models with clustered se
+multipleModelsFun<-function(outcome, data, id, time, covariate, controls=NULL, effect="twoways", controlsZero=NULL, rse=F, rsemethod=NULL, rsetype=NULL, rsecluster=NULL){
+  
+  # Filter data to only idtime, outcome, main covariates, controls
+  # d<-data[,c(id,outcome,covariate,controls,"admin3Name")]
+  
+  # Define names of outcome, covariate, and controls
+  y<-outcome
+  x<-covariate
+  
+  if (!is.null(controls)) {
+    controls<-paste0(controls, collapse = "+")
+    
+    # String of formula
+    f<-paste0(y, "~", x, "+", controls)
+    
+    
+    f<-as.formula(object = f)
+    print(f)
+  } else {
+    
+    # String of formula
+    f<-paste0(y, "~", x)
+    f<-as.formula(object = f)
+    print(f)
+  }
+  
+  
+  # Run models
+  m<-plm(formula = f, data = data, effect = effect, model = "within", index = c(id, time))
+  
+  
+  
+  # Return result
+  print(summary(m))
+  
+  ## Robust SE
+  if (rse) {
+    #mrse<-coeftest(m, vcovHC(m, method = rsemethod, type = rsetype, cluster = rsecluster))
+    mrse<-coeftest(x = m, vcov. = function(x) vcovHC(x, method = rsemethod, type = rsetype, cluster = rsecluster))
+    
+    #mrse<-sqrt(diag(vcovHC(x = m, method = rsemethod, type = rsetype, cluster = rsecluster)))
+    print(mrse)
+    #print(coeftest(m, vcovHC(m, method = rsemethod, type = rsetype, cluster = rsecluster)))
+  }
+  
+  return(m)
+}
 
 ## Complex variables ##
 cumsumResetFun <- function(vector) {
