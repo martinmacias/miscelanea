@@ -115,9 +115,9 @@ parseTablesFun<-function(unofficialData, unofficialCol, officialData, officialNa
   
   print(ncol(similarityTable))
   
-  if (municipio) {
-    names(similarityTable)<-paste0(names(similarityTable),"Mun")
-  }
+  #if (municipio) {
+  #  names(similarityTable)<-paste0(names(similarityTable),"Mun")
+  # }
   
   result<-cbind(unofficialData, similarityTable)
   
