@@ -1,8 +1,13 @@
 ## Name Matching ##
 # These functions help to identify how dissimilar is a column of names in a dataframe compared to a column of "official" names in another dataframe
-# It relies in the stringdist package in R
-
+# It relies in the stringdist package in R: https://cran.r-project.org/web/packages/stringdist/stringdist.pdf
+# Jaro distance: measures the number of matching characters between two strings that are not too many
+# positions apart and adds a penalty for matching characters that are transposed. 
+# Jaro-winkler: corrects for the fact that errors are commonly done in the first few characters after the first mismatch
 similarityFun<-function(unofficialName, officialData, officialNameCol, officialIDcol, method, p=0){
+  
+  # Packages
+  require(stringdist)
   
   # Set up vector of official names
   official<-officialData[,officialNameCol]
@@ -84,9 +89,9 @@ similarityFun<-function(unofficialName, officialData, officialNameCol, officialI
                               secondName,
                               secondValue,
                               m))
-  #if (ncol(result)!=7) {
-   # print(m)
-  #}
+  # if (ncol(result)!=7) {
+  #   print(m)
+  # }
   return(result)
 }
 
@@ -118,8 +123,6 @@ parseTablesFun<-function(unofficialData, unofficialCol, officialData, officialNa
   
   return(result)
 }
-
-
 
 
 
