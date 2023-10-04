@@ -77,8 +77,8 @@ similarityFun<-function(unofficialName, officialData, officialNameCol, officialI
       secondID<-officialID[indexSecond]
     }}
   
-  firstValue<-round(firstValue,3)
-  secondValue<-round(secondValue,3)
+  firstValue<-as.numeric(round(firstValue,3))
+  secondValue<-as.numeric(round(secondValue,3))
   m<-round(m,3)
   
   # Yield result as a dataframe with the names and values
@@ -92,6 +92,7 @@ similarityFun<-function(unofficialName, officialData, officialNameCol, officialI
   # if (ncol(result)!=7) {
   #   print(m)
   # }
+  
   return(result)
 }
 
@@ -115,8 +116,8 @@ parseTablesFun<-function(unofficialData, unofficialCol, officialData, officialNa
   
   print(ncol(similarityTable))
   
-  #if (municipio) {
-  #  names(similarityTable)<-paste0(names(similarityTable),"Mun")
+  # if (municipio) {
+  #   names(similarityTable)<-paste0(names(similarityTable),"Mun")
   # }
   
   result<-cbind(unofficialData, similarityTable)
@@ -126,6 +127,8 @@ parseTablesFun<-function(unofficialData, unofficialCol, officialData, officialNa
 
 
 
+
+##############################################################################################################################################################################################################################################################################
 ## st functions ##
 nSmallest<- function(dataframe, n) {
   # Apply the sorting and head functions to each row
@@ -325,7 +328,7 @@ pointsToVoronoi <- function(points, crs=NULL){
 }
 
 
-
+###############################################################################################################################################################################################################################################################################################################################################################
 ## Make columns with dummies out of columns with categorical variables ##
 dummiesFun<-function(name, column){
   output<-ifelse(column==name,1,0)
