@@ -505,4 +505,37 @@ cumsumResetFun <- function(vector) {
   return(result)
 }
 
-
+#########################################################
+robustci<-function(model,rsemethod, rsetype=NULL, rsecluster,level, round=F){
+  
+  # Coefficients
+  coefs<-coefficients(model)
+  
+  # Calculate robust std errors
+  rse<-sqrt(diag(vcovHC(x = model, method = rsemethod, rsetype=rsetype, cluster = rsecluster)))
+  
+  # Confidence level
+  if (level==95) {
+    criticalval<-1.96
+  } else{}
+  
+  if (level==90) {
+    criticalval<-1.645
+  }
+  
+  # CI upper
+  ciupper<-coefs+(rse*criticalval)
+  
+  # CI lower
+  cilower<-coefs-(rse*criticalval)
+  
+  # CIS
+  result<-cbind(coefs, rse, ciupper, cilower)
+  
+  # Round ?
+  if (round) {
+    result<-round(result,3)
+  }
+  
+  return(result)
+}
