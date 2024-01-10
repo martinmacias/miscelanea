@@ -332,31 +332,40 @@ pointsToVoronoi <- function(points, crs=NULL){
 ## Make columns with dummies out of columns with categorical variables ##
 dummiesFun<-function(name, column){
   output<-ifelse(column==name,1,0)
-  
   return(output)
 }
 
-dataDummiesFun<-function(dataset, pat){
+dataDummiesFun<-function(dataset, pat, ending=NULL){
   
   ## Names of the dataset
   datasetNames<-names(dataset)
   
-  ## Subdataset to analyze
+  ## Subdataset to analyze: keep the column with names to dichotomize
   datasetSub<-as.data.frame(dataset)[,grepl(pattern = pat, x = datasetNames)]
   
+  ## Get unique values of names to dichotomize
   u<-unique(datasetSub)
   
+  ## For each unique name, create an indicator
   l<-lapply(u, dummiesFun, column=datasetSub)
   
+  ## Paste the rows of the dataset
   l<-as.data.frame(do.call(what = "cbind", args = l))
   
-  names(l)<-paste0(u,"n")
+  ## Rename variables
+  if (!is.null(ending)) {
+    names(l)<-paste0(u,ending)
+  } else {
+    names(l)<-u
+  }
   
+  ## Stop if the datasets differ in length
   if (nrow(l)!=nrow(dataset)) {
     stop("Number of rows between the original dataset and the created dummies differ")
   }
-
- dataset<-cbind(dataset,l)
+  
+  ## Paste columns to original dataset
+  dataset<-cbind(dataset,l)
   
   return(dataset)
 }
