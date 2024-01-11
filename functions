@@ -372,6 +372,41 @@ dataDummiesFun<-function(dataset, pat, ending=NULL){
 
 
 
+naDummiesFun<-function(dataset, pat, ending=NULL){
+  
+  ## Names of the dataset
+  datasetNames<-names(dataset)
+  
+  ## Subdataset to analyze: keep the column with names to dichotomize
+  datasetSub<-as.data.frame(dataset)[,grepl(pattern = pat, x = datasetNames)]
+  
+  ## For each column, convert to 1 if NA
+  datasetSub<-apply(X = datasetSub,
+                    MARGIN = 2,
+                    function(x){
+                      
+                      ## Replace with NAs
+                      r<-ifelse(is.na(x),1,0)
+                      
+                      return(r)
+                    })
+  
+  datasetSub<-as.data.frame(datasetSub)
+  
+  ## Rename variables
+  if (!is.null(ending)) {
+    names(datasetSub)<-paste0(names(datasetSub),"NA")
+  } 
+  
+  ## Paste results
+  dataset<-cbind(dataset, datasetSub)
+  
+  ## Yield results
+  return(dataset)
+}
+
+
+
 st_intersection_points<-function(polygons, points){
   
   # intersect dataframe of voronoi polygons with data from points
