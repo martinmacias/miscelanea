@@ -583,3 +583,26 @@ robustci<-function(model,rsemethod, rsetype=NULL, rsecluster,level, round=F){
   
   return(result)
 }
+
+
+
+################################################
+Python
+################################################
+
+# Function to detect messages from a function and store it in an empty list
+# Define another function that stores the message in a list
+def store_in_list(message_list, message_func, *args):
+    
+    # Redirect the standard output to capture the printed message
+    sys.stdout = StringIO()
+    message_func(*args)
+    printed_message = sys.stdout.getvalue()
+    sys.stdout = sys.__stdout__  # Reset the standard output
+
+    # Store the captured message in the list
+    message_list.append(printed_message.strip())
+
+message_list=[]
+store_in_list(message_list, geemap.ee_to_numpy, image, ["B4","B3","B2"], roi)
+message_list
