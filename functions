@@ -585,6 +585,54 @@ robustci<-function(model,rsemethod, rsetype=NULL, rsecluster,level, round=F){
 }
 
 
+################################################
+Imputation
+################################################
+fillFun<-function(x, ids, cn){
+   # Goal: to redesign a predictor matrix for multiple imputation processes for a panel dataset, i.e., imputing the variables of each year at a time and using 
+   # each year's variable to impute the next year's variables but not the other way around.
+
+   # Input: a predictor matrix generated with mice including all variables in a dataset
+   # Output: 
+   # Filter row and column names after id variables
+   x<-x[!grepl(pattern = ids, x = x)]
+   
+   pat<-paste0(ids, collapse = "|")
+   cn<-cn[!grepl(pattern = pat, x = cn)]
+   
+   # Extract year
+   y<-as.numeric(gsub(pattern = "[a-zA-Z]", replacement = "", x = x))
+   
+   # Extract name
+   n<-gsub(pattern = "[0-9]", replacement = "", x = x)
+   
+   # Extract years of other variables
+   yy<-as.numeric(gsub(pattern = "[a-zA-Z]", replacement = "", x = cn))
+   
+   # Extract names of other variables
+   nn<-gsub(pattern = "[0-9]", replacement = "", x = cn)
+   print(nn)
+   
+   
+   # Test whether the years of other variables are lower than or equal to
+   yyl<-yy<y
+   yye<-yy==y
+   
+   # Test whether the name of other variables are different
+   nnd<-nn!=n
+   nns<-n==nn
+   
+   # Create a vector for the predictor matrix with 1 if the column variable has a name different 
+   # than the variable under analysis and the year is lower or equal than the variable
+   t<-as.numeric((nns&yyl)|(nnd&yyl)|(nnd&yye))
+   
+   # Add a 0 at the beggining for CVEGEO
+   t<-c(rep(0, length(ids)),t)
+   
+   return(t)
+ }
+ 
+
 
 ################################################
 Python
