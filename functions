@@ -590,11 +590,6 @@ Imputation
 ################################################
 fillFun<-function(x, ids, cn){
   
-
-# Goal: to redesign a predictor matrix for multiple imputation processes for a panel dataset, i.e., imputing the variables of each year at a time and using each year's variable to impute the next year's variables but not the other way around.
-# Input: a list of rownames from a predictor matrix generated with mice including all variables in a dataset
-# Output: a predictor matrix with a panel structure
-
   # Check if the package is installed; if not, install it
   if (!require(mice, quietly = TRUE)) {
     install.packages("mice")
@@ -622,8 +617,6 @@ fillFun<-function(x, ids, cn){
   
   # Extract names of other variables
   nn<-gsub(pattern = "[0-9]", replacement = "", x = cn)
-  print(nn)
-  
   
   # Test whether the years of other variables are lower than or equal to
   yyl<-yy<y
@@ -642,7 +635,6 @@ fillFun<-function(x, ids, cn){
   
   return(t)
 }
-
 
 
 
