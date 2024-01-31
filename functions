@@ -174,31 +174,6 @@ st_nearest_neighbors<-function(x,y,idColx,idColy,n){
   return(d)
 }
 
-# st_intersects_fast<-function(index,intersection,x,y,columnsx){
-#   # Input: index, intersection list, data x, data y, columns to keep from x
-#   # Output: a list with all the polygons from y intersected with the unique polygons from x
-#   
-#   require(sf)
-#   
-#   filter<-intersection[[index]]
-#   
-#   # take the information from favelas
-#   subsetx<-as.data.frame(x)[index,c("cd_fvl_", "NM_AGSN")]
-#   
-#   # create a dataset of the info from favelas length of filter
-#   subsetx<-as.data.frame(x = lapply(subsetx, rep, length(filter)))
-#   
-#   # subset of the information from the setores data with the filter
-#   subsety<-setoresDataShape[filter,]
-#   
-#   # cbind subset of setores with dataset with info from favelas
-#   output<-cbind(subsetx, subsety)
-#   
-#   # return the dataset 
-#   return(output)
-#   
-# }
-
 ## Intersection 3 times faster than st_intersection
 st_intersection_fast<-function(x,y, own_intersection=F, workers){
   
@@ -207,7 +182,7 @@ st_intersection_fast<-function(x,y, own_intersection=F, workers){
   
   # Packages
   require(sf)
-  #require(doParallel)
+  require(doParallel)
   
   # Harmonize crs
   if (st_crs(x)!=st_crs(y)) {
@@ -224,11 +199,14 @@ st_intersection_fast<-function(x,y, own_intersection=F, workers){
   }
   
   # 3. Parallel loop to intersect each subset of intersected features
-  print("loop")
+  print("Parallel loop running")
   
   ## Register workers
   cl<-makeCluster(workers)
   registerDoParallel(cl)
+  
+  # Set up on.exit to ensure the cluster is stopped when the function exits
+  on.exit(stopCluster(cl), add = TRUE)
   
   result<-
     foreach(m=seq_along(d), .combine = rbind) %dopar% {
@@ -248,7 +226,8 @@ st_intersection_fast<-function(x,y, own_intersection=F, workers){
       
       
       if (length(index)!=0) {
-        #     # Subset data
+        
+        # Subset data
         subx<-x[m,]
         suby<-y[index,]
         
@@ -262,7 +241,7 @@ st_intersection_fast<-function(x,y, own_intersection=F, workers){
     }
   
   # Stop cluster
-  stopCluster(cl)
+  #stopCluster(cl)
   
   # Non-parallel
   # result<-lapply(seq_along(d), function(m){
@@ -281,14 +260,13 @@ st_intersection_fast<-function(x,y, own_intersection=F, workers){
   #     return(int)
   #    }
   # })
-
+  
   # docall
   # print("docall")
   # result<-do.call(what = "rbind", args = result)
   
   return(result)
 }
-
 
 ## functions to transform points to voronoi polygons
 pointsToVoronoi <- function(points, crs=NULL){
