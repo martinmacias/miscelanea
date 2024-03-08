@@ -616,6 +616,24 @@ fillFun<-function(x, ids, cn){
 
 
 
+
+#############################################
+Require packages
+#############################################
+
+requireInstallPackages <- function(packageNames) {
+  for (packageName in packageNames) {
+    if (!requireNamespace(packageName, quietly = TRUE)) {
+      install.packages(packageName)
+      library(packageName, character.only = TRUE)
+    } else {
+      library(packageName, character.only = TRUE)
+    }
+  }
+}
+
+
+
 ################################################
 Python
 ################################################
