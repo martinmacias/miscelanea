@@ -633,6 +633,239 @@ requireInstallPackages <- function(packageNames) {
 }
 
 
+####################################################################################################################################################################
+Miscelanea of functions to run multiple models using the fixest package syntax and reporting the magnitude of coefficients relative to the dependent variables means
+####################################################################################################################################################################
+
+installAndLoadPackages <- function(packages) {
+  for (package in packages) {
+    if (!require(package, character.only = TRUE)) {
+      install.packages(package)
+    }
+    library(package, character.only = TRUE)
+  }
+}
+reportTableFun<-function(models, covariatesLabels, rowsAdd, title, fmt, omit, ...){
+  
+  installAndLoadPackages(packages = c("modelsummary", "gt", "kableExtra"))
+  
+  ## VCOV
+  #v<-models$clustervcv
+  
+  ## Table  
+  rt<-msummary(models = models, 
+                   stars = T,
+                   #vcov = v,
+                   title = title,
+                   gof_omit = omit,
+                   coef_map = covariatesLabels, 
+                   add_rows = rowsAdd,
+                   fmt = fmt, 
+                   ...) 
+  
+  ## Print table
+  return(rt)
+}
+
+robustci<-function(model, rsemethod, rsetype=NULL, rsecluster,level, round=F){
+  
+  # Coefficientses
+  coefs<-coefficients(model)
+  
+  # Calculate robust std errors
+  foo<-summary(model)
+  rse<-foo$coefficients[2]
+  
+  
+  # Confidence level
+  if (level==95) {
+    criticalval<-qnorm(p = 0.975, mean = 0, sd = 1)
+  } else{
+  
+  if (level==90) {
+    criticalval<-qnorm(p = 0.95, mean = 0, sd = 1)
+  }}
+  
+  # CI upper
+  ciupper<-coefs+(rse*criticalval)
+  
+  # CI lower
+  cilower<-coefs-(rse*criticalval)
+  
+  # CIS
+  result<-cbind(coefs, rse, ciupper, cilower)
+  
+  # Round ?
+  if (round) {
+    result<-round(result,3)
+  }
+  
+  return(result)
+}
+
+# Function to get regression coefficients as a % of the dv mean from a list of models.
+# Regression models must come from the lfe package
+effectFun <- function(models, data, outcome){
+  
+  result <- lapply(seq_len(length(models)), function(model){
+  
+    # Unused observations
+    unused <- models[[model]]$na.action
+    
+    # Used observations
+    used <- setdiff(1:nrow(data), unused)
+    
+    # Dependent variable mean
+    dv <- unlist(data[used, outcome])
+    dvmean <- mean(dv, na.rm = T)
+  
+    # Coefficient
+    beta <- models[[model]][["beta"]][1]
+    
+    # Effect as a percentage of the mean
+    out <- (beta/dvmean)*100
+    out <- rbind(dvmean, out)
+    out <- round(out, 5)
+    return(out)
+    
+  })
+  
+  return(result)
+  
+}
+
+effectFun <- function(models, data, outcome, unid){
+  
+  result <- lapply(seq_len(length(models)), function(model){
+    
+    
+    # Removed observations
+    print("Removed rows")
+    removedRows <- models[[model]]$obs_selection$obsRemoved
+    
+    # Dependent variable mean
+    print("dv mean")
+    if(is.null(removedRows)){
+      dv <- unlist(data[, outcome])
+      } else {
+        dv <- unlist(data[removedRows, outcome])
+        }
+
+    dvmean <- mean(dv, na.rm = T)
+    
+    # Coefficient
+    print("betas")
+    estim <- models[[model]]
+    beta <- coef(estim)[length(coef(estim))]
+    
+    # Effect as a percentage of the mean
+    out <- (beta/dvmean)*100
+    out <- rbind(dvmean, out)
+    out <- round(out, 5)
+    
+    return(out)
+    
+  })
+  
+  return(result)
+  
+  }
+
+
+multipleModelsFun <- function(data, fe, clusters, pairs, controls = NULL, logit=F) {
+  
+  # data: a dataframe
+  # fe: factors to be projected out with the felm function. These are the unit-year fixed effects and need to be in a single variable
+  # clusters: factors that identify the units to cluster the standard errors. If multiple, they need to be in a single variable.
+  # pairs: list of pairs of outcome, predictor as strings
+  # controls: vector of control variables
+
+  runModelForPair <- function(pair) {
+    
+    covariate <- pairs[pair,1]
+    outcome <- pairs[pair,2]
+
+    
+    # Set up fixed effects 
+    print("fe")
+    if (length(fe)>1) {
+      fe <- Reduce(function(x,y){paste(x,y,sep="+")}, x = fe)
+    }
+    
+    # Set up clusters
+    print("clus")
+    if (length(clusters)>1) {
+      clusters <- Reduce(function(x,y){paste(x,y,sep="+")}, x = clusters)
+    }
+    
+    
+    # If logit
+    print("logit?")
+    if (logit) {
+      
+      
+      # Set up formulas with controls
+      print("controls?")
+      if (!is.null(controls)) {
+        controlsString <- paste0(controls, collapse = "+")
+        formulaString <- paste0(outcome, "~", covariate, "+", controlsString, "|", fe)
+        } else {
+          formulaString <- paste0(outcome, "~", covariate, "|", fe)
+        }
+      
+      # Set up formula
+      print("formula")
+      form <- as.formula(formulaString)
+      print(form)
+      
+      # Run model
+      print("running model")
+      model <- feglm(fml = form, 
+                   data = data, 
+                   family = binomial(link = "logit"), 
+                   cluster = clusters, 
+                   fixef.rm = "none", 
+                   data.save = T)
+      
+      # Yield model
+      return(model)
+    } else { 
+      
+      # Set up formulas with controls
+    if (!is.null(controls)) {
+      controlsString <- paste0(controls, collapse = "+")
+      formulaString <- paste0(outcome, "~", covariate, "+", controlsString, "|", fe)
+    } else {
+      formulaString <- paste0(outcome, "~", covariate, "|", fe)
+    }
+    
+    # Set up formula
+    form <- as.formula(formulaString)
+    
+    # Run model
+    model <- feols(fml = form, 
+                   data = data, 
+                   cluster = clusters, 
+                   fixef.rm = "none", 
+                   data.save = T)
+    
+    # Yield model
+    return(model)
+      }
+  }
+  
+  # Apply the running model function for each pair
+  modelsList <- lapply(1:nrow(pairs), runModelForPair)
+  
+  
+  # Rename models results
+  names(modelsList) <- apply(pairs,1, function(pair){
+    result <- paste(pair[1],pair[2], sep="--")
+    return(result)
+  })  
+  
+  return(modelsList)
+}
 
 ################################################
 Python
